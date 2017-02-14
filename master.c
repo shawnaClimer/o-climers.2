@@ -5,6 +5,23 @@
 #include <ctype.h>
 #include <signal.h>
 #include <time.h>
+#define BILLION 1000000000L
+
+/*static int setperiodic(double sec){
+	timer_t timerid;
+	struct itimerspec value;
+	if(timer_create(CLOCK_REALTIME, NULL, &timerid) == -1){
+		return -1;
+	}
+	value.it_interval.tv_sec = (long)sec;
+	value.it_interval.tv_nsec = (sec - value.it_interval.tv_sec) * BILLION;
+	if(value.it_interval.tv_nsec >= BILLION){
+		value.it_interval.tv_sec++;
+		value.it_interval.tv_nsec -= BILLION;
+	}
+	value.it_value = value.it_interval;
+	return timer_settime(timerid, 0, &value, NULL);
+}*/
 
 int main(int argc, char **argv){
 	
@@ -78,28 +95,31 @@ int main(int argc, char **argv){
 	//puts(z);
 	
 	//create timer
-	//timer_t timerid;
-	//if(timer_create(CLOCK_REALTIME, NULL, &timerid) == -1){
-	//	perror("Failed to create a new timer");
-	//}
+	/*if(setperiodic(endTime) == -1){
+		perror("Failed to setup timer");
+		return 1;
+	}*/
+	
 	//TODO: set timer
 	
 	pid_t childpid;
-	childpid = fork();
-	if(childpid == -1){
-		perror("Failed to fork");
-		return 1;
+	int i;
+	for(i=0; i < numSlaves; i++){
+		childpid = fork();
+		if(childpid == -1){
+			perror("Failed to fork");
+			return 1;
+		}
+		if(childpid == 0){
+			execl("slave", "slave", filename, numIncrements, NULL);
+			perror("Child failed to exec slave");
+			return 1;
+		}
+		if(childpid != wait(NULL)){
+			perror("Parent failed to wait due to signal or error");
+			return 1;
+		}
 	}
-	if(childpid == 0){
-		execl("slave", "slave", filename, numIncrements, NULL);
-		perror("Child failed to exec slave");
-		return 1;
-	}
-	if(childpid != wait(NULL)){
-		perror("Parent failed to wait due to signal or error");
-		return 1;
-	}
-	
 	
 	return 0;
 }
