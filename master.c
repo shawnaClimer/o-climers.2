@@ -1,7 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/wait.h>
 #include <ctype.h>
+#include <signal.h>
+#include <time.h>
 
 int main(int argc, char **argv){
 	
@@ -61,9 +64,10 @@ int main(int argc, char **argv){
 	}
 	//puts(x);
 	//number of increments per slave
-	int numIncrements=3;
+	char *numIncrements="3";
 	if(iflag){//change numIncrements
-		numIncrements = atoi(y);
+		//numIncrements = atoi(y);
+		numIncrements = y;
 	}
 	//puts(y);
 	//time in seconds for master to terminate
@@ -73,5 +77,29 @@ int main(int argc, char **argv){
 	}
 	//puts(z);
 	
+	//create timer
+	//timer_t timerid;
+	//if(timer_create(CLOCK_REALTIME, NULL, &timerid) == -1){
+	//	perror("Failed to create a new timer");
+	//}
+	//TODO: set timer
 	
+	pid_t childpid;
+	childpid = fork();
+	if(childpid == -1){
+		perror("Failed to fork");
+		return 1;
+	}
+	if(childpid == 0){
+		execl("slave", "slave", filename, numIncrements, NULL);
+		perror("Child failed to exec slave");
+		return 1;
+	}
+	if(childpid != wait(NULL)){
+		perror("Parent failed to wait due to signal or error");
+		return 1;
+	}
+	
+	
+	return 0;
 }
