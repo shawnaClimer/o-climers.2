@@ -5,7 +5,12 @@
 #include <ctype.h>
 #include <signal.h>
 #include <time.h>
-#define BILLION 1000000000L
+
+//to use for control c termination signal handler
+static volatile sig_atomic_t doneflag = 0;
+static void setdoneflag(int signo){
+	doneflag = 1;
+}
 
 /*static int setperiodic(double sec){
 	timer_t timerid;
@@ -94,35 +99,62 @@ int main(int argc, char **argv){
 	}
 	//puts(z);
 	
-	//create timer
-	/*if(setperiodic(endTime) == -1){
-		perror("Failed to setup timer");
+	//for control c termination signal handler
+	struct sigaction act;
+	act.sa_handler = setdoneflag;
+	act.sa_flags = 0;
+	if((sigemptyset(&act.sa_mask) == -1) || (sigaction(SIGINT, &act, NULL) == -1)){
+		perror("Failed to set SIGINT handler");
 		return 1;
-	}*/
+	}
 	
-	//TODO: set timer
+	//create start time
+	struct timespec start, now;
+	clockid_t clockid;//clockid for timer
+	clockid = CLOCK_REALTIME;
+	long starttime, nowtime;
+	if(clock_gettime(clockid, &start) == 0){
+		starttime = start.tv_sec;
+	}
 	
 	pid_t childpid;
-	int i;
+	int i;//for iterating num of slaves
 	char processnum[15];
+		
 	for(i=0; i < numSlaves; i++){
-		childpid = fork();
-		if(childpid == -1){
-			perror("Failed to fork");
-			return 1;
+		//get current time
+		if(clock_gettime(clockid, &now) == 0){
+			nowtime = now.tv_sec;
 		}
-		if(childpid == 0){
-			processnum[0] = '\0';//clear out old data
-			sprintf(processnum, "%d", i);
-			execl("slave", "slave", filename, numIncrements, processnum, NULL);
-			perror("Child failed to exec slave");
-			return 1;
-		}
-		if(childpid != wait(NULL)){
-			perror("Parent failed to wait due to signal or error");
-			return 1;
+		//check for signal and timer
+		if(!doneflag && ((nowtime - starttime) < endTime)){
+			childpid = fork();
+			if(childpid == -1){
+				perror("Failed to fork");
+				return 1;
+			}
+			if(childpid == 0){
+				processnum[0] = '\0';//clear out old data
+				sprintf(processnum, "%d", (i + 1));
+				execl("slave", "slave", filename, numIncrements, processnum, NULL);
+				perror("Child failed to exec slave");
+				return 1;
+			}
+			if(childpid != wait(NULL)){
+				perror("Parent failed to wait due to signal or error");
+				return 1;
+			}
+		}else{
+			if(doneflag){
+				puts("control c termination");
+			}else{
+				puts("timer ran out");
+			}
+			break;
 		}
 	}
+	
+	//TODO code for freeing shared memory
 	
 	return 0;
 }
