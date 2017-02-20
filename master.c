@@ -114,26 +114,31 @@ int main(int argc, char **argv){
 	key_t key;
 	int shmid;
 	int *shared;
+	int *here;
 	void *shmaddr = NULL;
 	int mode;
-	/* if((key = ftok("master.c", 'R')) == -1){
+	if((key = ftok("master.c", 7)) == -1){
 		perror("key error");
 		return 1;
-	} */
+	} 
 	//get the shared memory
-	if((shmid = shmget(IPC_PRIVATE, sizeof(int), PERM)) == -1){
+	if((shmid = shmget(key, sizeof(int), IPC_CREAT | 0666)) == -1){
 		perror("failed to create shared memory");
 		return 1;
 	}
 	//attach to shared memory
-	if((shared = (int *)shmat(shmid, shmaddr, PERM)) == (void *)-1){
+	if((shared = (int *)shmat(shmid, shmaddr, 0)) == (void *)-1){
 		perror("failed to attach");
 		if(shmctl(shmid, IPC_RMID, NULL) == -1){
 			perror("failed to remove memory seg");
 		}
 		return 1;
 	}
-	
+	here = shared;
+	*here = 5;
+	if(*here > 4){
+		puts("5 is in shared");
+	}
 	//for child process
 	pid_t childpid;
 	int i;//for iterating num of slaves
@@ -174,7 +179,7 @@ int main(int argc, char **argv){
 		}
 	}
 	
-	//TODO code for freeing shared memory
+	//code for freeing shared memory
 	if(shmdt(shared) == -1){
 		perror("failed to detach from shared memory");
 		return 1;
