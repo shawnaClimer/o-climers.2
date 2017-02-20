@@ -4,7 +4,7 @@
 #include <unistd.h> //used for sleep
 #include <stdlib.h>
 #include <errno.h>
-
+#define MILLION 1000000L
 
 int main(int argc, char **argv){
 	//sent from master
@@ -29,10 +29,10 @@ int main(int argc, char **argv){
 	//message to be written to test.out
 	char *message = (char *)malloc(100);
 	
-	struct timespec tp;
+	struct timespec tpstamp;
 	clockid_t clockid;//clockid for timestamp
 	clockid = CLOCK_REALTIME;
-	long time = 0;
+	long timess, timens;
 	//int tsize = sizeof(time);
 	//tsize++;
 	//string for timestamp
@@ -59,10 +59,13 @@ int main(int argc, char **argv){
 		
 		//get time and put in string
 		tmstring[0] = '\0';//clear previous time
-		if(clock_gettime(clockid, &tp) == 0){
-				time = tp.tv_nsec;//time in nanosecs
-			}
-		sprintf(tmstring, "%20d", time);//convert time to string
+		if(clock_gettime(clockid, &tpstamp) == 0){
+			timess = tpstamp.tv_sec;
+			timens = tpstamp.tv_nsec;//time in ssnn
+		}
+		sprintf(tmstring, "%d", timess);//convert time to string
+		strcat(message, tmstring);
+		sprintf(tmstring, "%d", timens);
 		strcat(message, tmstring);
 		strcat(message, " with sharedNum = ");
 		sprintf(shared, "%d", i);
