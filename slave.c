@@ -12,7 +12,7 @@
 #include <signal.h>
 #include <fcntl.h>
 #include <sys/stat.h>
-//#define PERM (S_IRUSR | S_IWUSR)
+
 
 int main(int argc, char **argv){
 	//sent from master
@@ -55,17 +55,13 @@ int main(int argc, char **argv){
 	for(i = 0; i < numiterations; i++){
 		puts("this is slave");
 		
-		//TODO: code for entering critical section
-		puts("calling sleep");
-		sleep(rand() % 3);//sleeps for 0-2 seconds
-		
 		//shared memory
 		key_t key;
 		int shmid;
 		int *shared;
 		int *here;
 		void *shmaddr = NULL;
-		int mode;
+		
 		if((key = ftok("master.c", 7)) == -1){
 			perror("key error");
 			return 1;
@@ -84,11 +80,18 @@ int main(int argc, char **argv){
 			return 1;
 		}
 		here = shared;
-		//*here = 0;
-		if(*here > 4){
-			puts("found shared memory");
-		}
+		int sharedNum;
 		
+		//TODO: code for entering critical section
+		puts("calling sleep");
+		sleep(rand() % 3);//sleeps for 0-2 seconds
+		*here = *here + 1;
+		sharedNum = *here;
+		sleep(rand() % 3);
+		//TODO: code for exiting critical section
+		
+		
+		//build message for output file		
 		message[0] = '\0';//clear previous message
 		strcat(message, "File modified by process number ");
 		strcat(message, processnum);
@@ -104,9 +107,10 @@ int main(int argc, char **argv){
 		strcat(message, tmstring);
 		sprintf(tmstring, "%d", timens);
 		strcat(message, tmstring);
+		
+		//update with shared memory
 		strcat(message, " with sharedNum = ");
-		*here = *here + 1;
-		sprintf(sharedstring, "%d", *here);
+		sprintf(sharedstring, "%d", sharedNum);
 		strcat(message, sharedstring);
 		strcat(message, "\n");
 		
@@ -133,8 +137,7 @@ int main(int argc, char **argv){
 			perror("failed to detach from shared memory");
 			return 1;
 		}
-		sleep(rand() % 3);
-		//TODO: code for exiting critical section
+		
 		
 	}
 }
