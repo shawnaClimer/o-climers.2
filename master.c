@@ -71,7 +71,7 @@ int main(int argc, char **argv){
 	}
 	//set default filename for log
 	if(lflag == 0){
-		filename = "logfile.txt";
+		filename = "test.out";
 	}
 	//puts(filename);
 	//number of slaves
@@ -104,6 +104,7 @@ int main(int argc, char **argv){
 	
 	pid_t childpid;
 	int i;
+	char processnum[15];
 	for(i=0; i < numSlaves; i++){
 		childpid = fork();
 		if(childpid == -1){
@@ -111,7 +112,9 @@ int main(int argc, char **argv){
 			return 1;
 		}
 		if(childpid == 0){
-			execl("slave", "slave", filename, numIncrements, NULL);
+			processnum[0] = '\0';//clear out old data
+			sprintf(processnum, "%d", i);
+			execl("slave", "slave", filename, numIncrements, processnum, NULL);
 			perror("Child failed to exec slave");
 			return 1;
 		}
