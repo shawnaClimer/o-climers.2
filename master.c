@@ -1,10 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <sys/types.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
 #include <ctype.h>
 #include <signal.h>
 #include <time.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#define PERM (S_IRUSR | S_IWUSR)
 
 //to use for control c termination signal handler
 static volatile sig_atomic_t doneflag = 0;
@@ -12,21 +19,7 @@ static void setdoneflag(int signo){
 	doneflag = 1;
 }
 
-/*static int setperiodic(double sec){
-	timer_t timerid;
-	struct itimerspec value;
-	if(timer_create(CLOCK_REALTIME, NULL, &timerid) == -1){
-		return -1;
-	}
-	value.it_interval.tv_sec = (long)sec;
-	value.it_interval.tv_nsec = (sec - value.it_interval.tv_sec) * BILLION;
-	if(value.it_interval.tv_nsec >= BILLION){
-		value.it_interval.tv_sec++;
-		value.it_interval.tv_nsec -= BILLION;
-	}
-	value.it_value = value.it_interval;
-	return timer_settime(timerid, 0, &value, NULL);
-}*/
+
 
 int main(int argc, char **argv){
 	
@@ -117,9 +110,34 @@ int main(int argc, char **argv){
 		starttime = start.tv_sec;
 	}
 	
+	//shared memory
+	key_t key;
+	int shmid;
+	int *shared;
+	void *shmaddr = NULL;
+	int mode;
+	/* if((key = ftok("master.c", 'R')) == -1){
+		perror("key error");
+		return 1;
+	} */
+	//get the shared memory
+	if((shmid = shmget(IPC_PRIVATE, sizeof(int), PERM)) == -1){
+		perror("failed to create shared memory");
+		return 1;
+	}
+	//attach to shared memory
+	if((shared = (int *)shmat(shmid, shmaddr, PERM)) == (void *)-1){
+		perror("failed to attach");
+		if(shmctl(shmid, IPC_RMID, NULL) == -1){
+			perror("failed to remove memory seg");
+		}
+		return 1;
+	}
+	
+	//for child process
 	pid_t childpid;
 	int i;//for iterating num of slaves
-	char processnum[15];
+	char processnum[15];//for sending slave number
 		
 	for(i=0; i < numSlaves; i++){
 		//get current time
@@ -145,6 +163,8 @@ int main(int argc, char **argv){
 				return 1;
 			}
 		}else{
+			//TODO code for killing child processes
+			
 			if(doneflag){
 				puts("control c termination");
 			}else{
@@ -155,6 +175,14 @@ int main(int argc, char **argv){
 	}
 	
 	//TODO code for freeing shared memory
+	if(shmdt(shared) == -1){
+		perror("failed to detach from shared memory");
+		return 1;
+	}
+	if(shmctl(shmid, IPC_RMID, NULL) == -1){
+		perror("failed to delete shared memory");
+		return 1;
+	}
 	
 	return 0;
 }
