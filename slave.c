@@ -12,7 +12,7 @@
 #include <signal.h>
 #include <fcntl.h>
 #include <sys/stat.h>
-#define PERM (S_IRUSR | S_IWUSR)
+//#define PERM (S_IRUSR | S_IWUSR)
 
 int main(int argc, char **argv){
 	//sent from master
@@ -105,6 +105,7 @@ int main(int argc, char **argv){
 		sprintf(tmstring, "%d", timens);
 		strcat(message, tmstring);
 		strcat(message, " with sharedNum = ");
+		*here = *here + 1;
 		sprintf(sharedstring, "%d", *here);
 		strcat(message, sharedstring);
 		strcat(message, "\n");

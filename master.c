@@ -11,7 +11,7 @@
 #include <time.h>
 #include <fcntl.h>
 #include <sys/stat.h>
-#define PERM (S_IRUSR | S_IWUSR)
+//#define PERM (S_IRUSR | S_IWUSR)
 
 //to use for control c termination signal handler
 static volatile sig_atomic_t doneflag = 0;
@@ -135,9 +135,9 @@ int main(int argc, char **argv){
 		return 1;
 	}
 	here = shared;
-	*here = 5;
-	if(*here > 4){
-		puts("5 is in shared");
+	*here = 0;
+	if(*here == 0){
+		puts("0 is in shared");
 	}
 	//for child process
 	pid_t childpid;
@@ -178,7 +178,9 @@ int main(int argc, char **argv){
 			break;
 		}
 	}
-	
+	if(*here > 0){
+		puts("shared memory was updated");
+	}
 	//code for freeing shared memory
 	if(shmdt(shared) == -1){
 		perror("failed to detach from shared memory");
