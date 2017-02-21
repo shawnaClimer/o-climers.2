@@ -16,7 +16,6 @@
 
 int main(int argc, char **argv){
 	//sent from master
-	//char *filename;
 	int numiterations;
 	
 	puts(argv[0]);
@@ -82,14 +81,74 @@ int main(int argc, char **argv){
 		here = shared;
 		int sharedNum;
 		
-		//TODO: code for entering critical section
+		//allocate shared memory for bakery algorithm
+		key_t bakerykey;
+		int bakeid;
+		int *bakeshare;
+		int *bakenum;
+		if((bakerykey = ftok("master.c", 8)) == -1){
+			perror("bakery key error");
+			return 1;
+		}
+		if((bakeid = shmget(bakerykey, (sizeof(int) * 21), IPC_CREAT | 0666)) == -1){
+			perror("failed to create bakery shared memory");
+			return 1;
+		}
+		if((bakeshare = (int *)shmat(bakeid, NULL, 0)) == (void *)-1){
+			perror("failed to attach bakeshare");
+			if(shmctl(bakeid, IPC_RMID, NULL) == -1){
+				perror("failed to remove bake mem seg");
+			}
+			return 1;
+		}
+		bakenum = bakeshare;
+		
+		//code for entering critical section
+		*bakenum++;
+		while(*bakenum == 1){} //if someone is choosing we wait
+		*bakenum = 1;//set first spot to flag process is choosing
+		int k;
+		int max = 0;
+		int temp;
+		for(k = 1; k < 20; k++){
+			temp = *bakenum++;
+			if(temp > max){
+				max = temp;
+			}
+		}
+		bakenum = bakeshare;//return to beginning
+		max++;
+		for(k = 0; k < i + 2; k++){// ith spot comes after flag
+			*bakenum++;
+		}
+		*bakenum = max;
+		bakenum = bakeshare;//return to beginning
+		*bakenum++ = 0;//set flag back to zero
+		
+		//do{
+			//int n = sizeof(number[]);
+		/* choosing[i] = 1;
+		int k = 0;
+		int max = 0;
+		while(number[k] != NULL){
+			if(number[k] > max){
+				max = number[k];
+			}
+			k++;
+		}
+		//number[i] = 1 + max(number[0], ..., number[n-1]);
+		number[i] = 1 + max;
+		choosing[i] = 0;
+		int j;
+		for(j = 0; j < k; j++){
+			while(choosing[j]);
+			while((number[j] !=0) && (number[j] < number[i] || (number[j] == number[i] && j < i)));
+		} */
+		//}
 		puts("calling sleep");
 		sleep(rand() % 3);//sleeps for 0-2 seconds
 		*here = *here + 1;
 		sharedNum = *here;
-		sleep(rand() % 3);
-		//TODO: code for exiting critical section
-		
 		
 		//build message for output file		
 		message[0] = '\0';//clear previous message
@@ -122,10 +181,10 @@ int main(int argc, char **argv){
 			return -1;
 		}
 		char ch;
-		int j = 0;
-		while(message[j] != '\0'){
-			ch = message[j];
-			j++;
+		int c = 0;
+		while(message[c] != '\0'){
+			ch = message[c];
+			c++;
 			if(fputc(ch, logfile) != ch){//error writing to file
 				fclose(logfile);
 				return -1;
@@ -137,7 +196,9 @@ int main(int argc, char **argv){
 			perror("failed to detach from shared memory");
 			return 1;
 		}
-		
+		sleep(rand() % 3);
+		//TODO: code for exiting critical section
+		//number[i] = 0;
 		
 	}
 }

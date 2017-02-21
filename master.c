@@ -13,6 +13,10 @@
 #include <sys/stat.h>
 //#define PERM (S_IRUSR | S_IWUSR)
 
+//for bakery algorithm
+//extern int choosing[20];
+//extern int number[20];
+
 //to use for control c termination signal handler
 static volatile sig_atomic_t doneflag = 0;
 static void setdoneflag(int signo){
@@ -116,7 +120,7 @@ int main(int argc, char **argv){
 	int *shared;
 	int *here;
 	void *shmaddr = NULL;
-	int mode;
+	
 	if((key = ftok("master.c", 7)) == -1){
 		perror("key error");
 		return 1;
@@ -139,6 +143,34 @@ int main(int argc, char **argv){
 	if(*here == 0){
 		puts("0 is in shared");
 	}
+	
+	//allocate shared memory for bakery algorithm
+	key_t bakerykey;
+	int bakeid;
+	int *bakeshare;
+	int *bakenum;
+	if((bakerykey = ftok("master.c", 8)) == -1){
+		perror("bakery key error");
+		return 1;
+	}
+	if((bakeid = shmget(bakerykey, (sizeof(int) * 21), IPC_CREAT | 0666)) == -1){
+		perror("failed to create bakery shared memory");
+		return 1;
+	}
+	if((bakeshare = (int *)shmat(bakeid, NULL, 0)) == (void *)-1){
+		perror("failed to attach bakeshare");
+		if(shmctl(bakeid, IPC_RMID, NULL) == -1){
+			perror("failed to remove bake mem seg");
+		}
+		return 1;
+	}
+	bakenum = bakeshare;
+	int j;
+	for(j = 0; j < 20; j++){
+		*bakenum++ = 0; //set first to all zeroes
+	}
+	*bakenum = -1;
+	
 	//for child process
 	pid_t childpid;
 	int i;//for iterating num of slaves
@@ -163,10 +195,10 @@ int main(int argc, char **argv){
 				perror("Child failed to exec slave");
 				return 1;
 			}
-			if(childpid != wait(NULL)){
+			/* if(childpid != wait(NULL)){
 				perror("Parent failed to wait due to signal or error");
 				return 1;
-			}
+			} */
 		}else{
 			//TODO code for killing child processes
 			
@@ -178,6 +210,10 @@ int main(int argc, char **argv){
 			break;
 		}
 	}
+	if(childpid != wait(NULL)){
+		perror("Parent failed to wait due to signal or error");
+		return 1;
+	}			
 	if(*here > 0){
 		puts("shared memory was updated");
 	}
@@ -188,6 +224,15 @@ int main(int argc, char **argv){
 	}
 	if(shmctl(shmid, IPC_RMID, NULL) == -1){
 		perror("failed to delete shared memory");
+		return 1;
+	}
+	//free bakery shared memory
+	if(shmdt(bakeshare) == -1){
+		perror("failed to detach bakery mem");
+		return 1;
+	}
+	if(shmctl(bakeid, IPC_RMID, NULL) == -1){
+		perror("failed to delete bake share mem");
 		return 1;
 	}
 	

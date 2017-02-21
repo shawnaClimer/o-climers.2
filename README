@@ -1,0 +1,18 @@
+use command "make master slave" to compile both programs
+
+my program attempts to create slave processes and have each one iterate a given number of
+times. On each iteration, the child process accesses a shared memory integer, increments it,
+and prints to an output file. I used a chunk of shared memory to hold an array of integers to
+use for the bakery algorithm. The first int in the array is the choosing flag. Programs can 
+enter in to choose their "number" if no one else is currently choosing.
+
+my version control is at https://github.com/shawnaClimer/o-climers.2
+
+things that don't work properly:
+1) control c will prevent master from forking any more children, but it does not clean up shared
+memory that is still attached to by children.
+2) bakery algorithm seems to hang program after the children finish iterating. I ran out of time
+to figure out how to fix it.
+3) I realized in class that I had the "wait" check in master in the for loop, so it was waiting 
+for each child to terminate before forking another. I moved it outside the for loop, but it needs
+to be changed to work right.
